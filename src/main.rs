@@ -15,24 +15,22 @@ fn main() {
 
     let raw_results = fs::read_to_string("C:\\Users\\dwall\\repos\\minerva\\nightly_results.xml")
         .expect("The file could not be found.");
-    let mut results = raw_results.replace("<>", "").replace("&", "");
-    //let re = Regex::new(r"<failure message="(.*)">(.*)</failure>").unwrap();
+    let results = raw_results.replace("<>", "").replace("&", "");
     let re = Regex::new(r"<failure message=(?P<msg>.*)>(?P<content>.*)</failure>").unwrap();
-    // let binding = results.to_string();
-    // let results = re.replace_all(
-    //     binding.as_str(),
-    //     "<failure message=\"\">Some error</failure>",
-    // );
-    if let Some(captures) = re.captures(results.as_str()) {
-        let message = encode(captures.get(1).unwrap().as_str());
-        let content = encode(captures.get(2).unwrap().as_str());
-        results = re.replace(results.as_str(), format!("<failure message=\"{}\">{}</failure>", message.to_string(), content.to_string()).as_str()).to_string();
+    let mut other_results = results.clone();
+    let captures = re.captures_iter(results.as_str());
+    for cap in captures {
+        let message = encode(cap.get(1).unwrap().as_str());
+        let content = encode(cap.get(2).unwrap().as_str());
+        
+        other_results = re.replace_all(other_results.as_str(), format!("<failure message=\"{}\">{}</failure>", message.to_string(), content.to_string()).as_str()).to_string();
     }
+    println!("{}", other_results);
 
-    println!("{}", encode("selenium.common.exceptions.TimeoutException: Message: Stacktrace: #0 0x55804c5f9b13 <unknown> #1 0x55804c400688 <unknown> #2 0x55804c437cc7 <unknown> #3 0x55804c437e91 <unknown> #4 0x55804c46ae34 <unknown> #5 0x55804c4558dd <unknown> #6 0x55804c468b94 <unknown> #7 0x55804c4557a3 <unknown> #8 0x55804c42b0ea <unknown> #9 0x55804c42c225 <unknown> #10 0x55804c6412dd <unknown> #11 0x55804c6452c7 <unknown> #12 0x55804c62b22e <unknown> #13 0x55804c6460a8 <unknown> #14 0x55804c61fbc0 <unknown> #15 0x55804c6626c8 <unknown> #16 0x55804c662848 <unknown> #17 0x55804c67cc0d <unknown> #18 0x7f1b224a5609 <unknown>"));
-    println!("{}", results);
+    
+    
 
-    let ts: TestSuites = from_str(&results.to_string()).unwrap();
+    let ts: TestSuites = from_str(&other_results.to_string()).unwrap();
     for suite in ts.test_suites {
         for case in suite.test_cases {
             let new_result = NewTestResult {
