@@ -8,5 +8,7 @@ edition = "2021"
 [dependencies]
 serde =  { version = "1.0.144", features = ["derive"]}
 serde-xml-rs = "0.6.0"
-diesel = { version = "2.0.0", features = ["postgres"]}
+chrono = "0.4.23"
+diesel = { version = "2.0.0", features = ["postgres", "chrono", "numeric"]}
 dotenvy = "0.15"
+bigdecimal = "0.3.0"
