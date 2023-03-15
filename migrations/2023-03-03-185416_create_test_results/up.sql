@@ -5,5 +5,6 @@ CREATE TABLE test_results (
     duration NUMERIC NOT NULL,
     run_at TIMESTAMP WITH TIME ZONE NOT NULL,
     name TEXT NOT NULL,
-    status TEXT NOT NULL
+    status TEXT NOT NULL,
+    error_message TEXT
 )

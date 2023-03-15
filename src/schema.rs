@@ -7,5 +7,6 @@ diesel::table! {
         run_at -> Timestamptz,
         name -> Text,
         status -> Text,
+        error_message -> Nullable<Text>,
     }
 }

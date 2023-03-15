@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use minerva::*;
 use serde::{Deserialize, Serialize};
 use serde_xml_rs::from_str;
-use urlencoding::encode;
+use urlencoding::{encode, decode};
 
 fn main() {
     use self::schema::test_results::dsl::*;
@@ -21,7 +21,7 @@ fn main() {
     let captures = re.captures_iter(results.as_str());
     for cap in captures {
         let message = encode(cap.get(1).unwrap().as_str());
-        let content = encode(cap.get(2).unwrap().as_str());
+        let content = encode(cap.get(2).unwrap().as_str()).into_owned();
         
         other_results = re.replace_all(other_results.as_str(), format!("<failure message=\"{}\">{}</failure>", message.to_string(), content.to_string()).as_str()).to_string();
     }
@@ -33,17 +33,28 @@ fn main() {
     let ts: TestSuites = from_str(&other_results.to_string()).unwrap();
     for suite in ts.test_suites {
         for case in suite.test_cases {
+            // let err_msg: &str;
+            // let msg = match case.failure.as_ref() {
+            //     Some(msg) => let err_msg1 = decode(msg.message.as_str()).unwrap().as_ref(),
+            //     None => err_msg = "",
+            // };
+            //let msg = case.failure.unwrap_or_default().map_or(None, |f| Some(decode(f.message.as_str()).unwrap().as_ref()));
+            //let msg = case.failure.as_ref().map_or(None, |f| Some(decode(f.message.as_str()).unwrap().as_ref()));
+            //let message = case.failure.as_ref().map_or(None, |f| Some(decode(f.message.as_ref()).into_ok().into_owned()));
+            let msg = case.failure.as_ref().map_or(None, |f| Some(f.message.as_str()));
+            let statusz = case.failure.as_ref().map_or("Passed", |_| "Failed");
             let new_result = NewTestResult {
                 duration: case.time.parse().unwrap(),
                 run_at: suite.timestamp.parse().unwrap(),
                 name: &case.name,
-                status: &case.failure.map_or("Passed".to_string(), |_| "Failed".to_string()),
+                status: &statusz,
+                error_message: msg,
             };
 
             diesel::insert_into(test_results)
                 .values(&new_result)
                 .execute(connection)
-                .expect("Error saving new post");
+                .expect("Error saving test result");
         }
     }
 }
@@ -69,7 +80,7 @@ struct TestSuite {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-struct TestCase {
+struct  TestCase {
     classname: String,
     name: String,
     time: String,
