@@ -21,5 +21,5 @@ pub struct NewTestResult<'a> {
     pub run_at: NaiveDateTime,
     pub name: &'a str,
     pub status: &'a str,
-    pub error_message: Option<&'a str>
+    pub error_message: Option<String>
 }
