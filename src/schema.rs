@@ -8,5 +8,6 @@ diesel::table! {
         name -> Text,
         status -> Text,
         error_message -> Nullable<Text>,
+        job_name -> Nullable<Text>,
     }
 }

@@ -1,7 +1,7 @@
-use diesel::prelude::*;
-use chrono::{ NaiveDateTime };
 use crate::schema::test_results;
-use bigdecimal::{ BigDecimal };
+use bigdecimal::BigDecimal;
+use chrono::NaiveDateTime;
+use diesel::prelude::*;
 
 #[derive(Queryable)]
 #[diesel(table_name = test_results)]
@@ -11,7 +11,8 @@ pub struct TestResult {
     pub run_at: NaiveDateTime,
     pub name: String,
     pub status: String,
-    pub error_message: Option<String>
+    pub error_message: Option<String>,
+    pub job_name: String,
 }
 
 #[derive(Insertable, Clone)]
@@ -21,5 +22,6 @@ pub struct NewTestResult<'a> {
     pub run_at: NaiveDateTime,
     pub name: &'a str,
     pub status: &'a str,
-    pub error_message: Option<String>
+    pub error_message: Option<String>,
+    pub job_name: &'a str,
 }
