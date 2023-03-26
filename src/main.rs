@@ -41,32 +41,37 @@ fn main() {
         }
 
         let ts: TestSuites = from_str(&other_results.to_string()).unwrap();
+        
         for suite in ts.test_suites {
-            for case in suite.test_cases {
-                let msg = case.failure.as_ref().map_or(None, |f| {
+            let tcs: Vec<TestCase> = suite.test_cases;
+            let mut all_results: Vec<NewTestResult> = Vec::new();
+            let time_run = suite.timestamp.parse().unwrap();
+            for i in 0..tcs.len() {
+                let msg = tcs[i].failure.as_ref().map_or(None, |f| {
                     Some(decode(&f.message.as_str()).unwrap().into_owned())
                 });
-                let mut statusz = case.failure.as_ref().map_or("Passed", |_| "Failed");
+                let mut statusz = tcs[i].failure.as_ref().map_or("Passed", |_| "Failed");
                 let v: Vec<Skipped> = Vec::new();
-                let skipped_length = case.skipped.as_ref().map_or(&v, |x| x).len();
+                let skipped_length = tcs[i].skipped.as_ref().map_or(&v, |x| x).len();
                 if skipped_length > 0 {
                     statusz = "Skipped"
                 }
 
                 let new_result = NewTestResult {
-                    duration: case.time.parse().unwrap(),
-                    run_at: suite.timestamp.parse().unwrap(),
-                    name: &case.name,
+                    duration: tcs[i].time.parse().unwrap(),
+                    run_at: time_run,
+                    name: &tcs[i].name,
                     status: &statusz,
                     error_message: msg,
                     job_name: &suite.hostname,
                 };
+                all_results.push(new_result);  
+            }
 
-                diesel::insert_into(test_results)
-                    .values(&new_result)
+            diesel::insert_into(test_results)
+                    .values(&all_results)
                     .execute(connection)
                     .expect("Error saving test result");
-            }
         }
     }
 }
