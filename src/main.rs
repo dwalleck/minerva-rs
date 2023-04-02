@@ -1,6 +1,7 @@
 use std::fs;
 
 use self::models::*;
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use minerva::*;
 use regex::Regex;
@@ -14,8 +15,9 @@ fn main() {
     let connection = &mut establish_connection();
 
     let path = "C:\\Users\\dwalleck\\repos\\junitxml-result-scraper";
-    for entry in fs::read_dir(path).unwrap() {
-        let entry = entry.unwrap();
+    for entry_o in fs::read_dir(path).unwrap() {
+        let entry = entry_o.unwrap();
+        println!("Processing {:?}", entry.path().display());
         let path = entry.path();
         let raw_results = fs::read_to_string(path).unwrap();
 
@@ -39,9 +41,8 @@ fn main() {
                 )
                 .to_string();
         }
-
         let ts: TestSuites = from_str(&other_results.to_string()).unwrap();
-        
+
         for suite in ts.test_suites {
             let tcs: Vec<TestCase> = suite.test_cases;
             let mut all_results: Vec<NewTestResult> = Vec::new();
@@ -65,13 +66,13 @@ fn main() {
                     error_message: msg,
                     job_name: &suite.hostname,
                 };
-                all_results.push(new_result);  
+                all_results.push(new_result);
             }
 
             diesel::insert_into(test_results)
-                    .values(&all_results)
-                    .execute(connection)
-                    .expect("Error saving test result");
+                .values(&all_results)
+                .execute(connection)
+                .expect("Error saving test result");
         }
     }
 }
