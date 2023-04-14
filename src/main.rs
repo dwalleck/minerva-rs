@@ -1,9 +1,11 @@
-use std::fs;
-
+use std::{fs, str::FromStr};
+use std::path::PathBuf;
 use self::models::*;
+use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use minerva::*;
+use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_xml_rs::from_str;
@@ -11,14 +13,26 @@ use urlencoding::{decode, encode};
 
 fn main() {
     use self::schema::test_results::dsl::*;
+    use self::schema::test_summaries::dsl::*;
 
-    let connection = &mut establish_connection();
+    
 
     let path = "C:\\Users\\dwalleck\\repos\\junitxml-result-scraper";
-    for entry_o in fs::read_dir(path).unwrap() {
-        let entry = entry_o.unwrap();
-        println!("Processing {:?}", entry.path().display());
-        let path = entry.path();
+
+    let entries: Vec<_> = fs::read_dir(path)
+        .unwrap()
+        .map(|res| res.map(|entry| entry.path())) // Map DirEntry to PathBuf and handle potential errors
+        .collect::<Result<_, _>>() // Collect and handle potential errors
+        .unwrap();
+
+    entries.par_iter().for_each(|entry_o| {
+        let connection = &mut establish_connection();
+    
+
+    //for entry_o in fs::read_dir(path).unwrap() {
+        let entry = entry_o.to_owned();
+        println!("Processing {:?}", entry.to_str());
+        let path = entry.as_path();
         let raw_results = fs::read_to_string(path).unwrap();
 
         let results = raw_results.replace("<>", "").replace("&", "");
@@ -69,12 +83,28 @@ fn main() {
                 all_results.push(new_result);
             }
 
+            let new_summary = NewTestSummary {
+                name: &suite.name,
+                errors: &suite.errors,
+                failures: &suite.failures,
+                skipped: &suite.skipped,
+                tests: &suite.tests,
+                time: BigDecimal::from_str(&suite.time).unwrap(),
+                timestamp: NaiveDateTime::parse_from_str(&suite.timestamp, "%Y-%m-%dT%H:%M:%S%.f")
+                    .unwrap(),
+            };
+
+            diesel::insert_into(test_summaries)
+                .values(new_summary)
+                .execute(connection)
+                .expect("Error saving test summary");
+
             diesel::insert_into(test_results)
                 .values(&all_results)
                 .execute(connection)
                 .expect("Error saving test result");
         }
-    }
+    });
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -86,10 +116,10 @@ struct TestSuites {
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 struct TestSuite {
     name: String,
-    tests: u32,
-    errors: u32,
-    failures: u32,
-    skipped: u32,
+    tests: i32,
+    errors: i32,
+    failures: i32,
+    skipped: i32,
     hostname: String,
     time: String,
     timestamp: String,
